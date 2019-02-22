@@ -28,7 +28,7 @@
        <item>
         <widget class="QLineEdit" name="lineEdit_oldFilePath">
          <property name="text">
-          <string>Press 'Open Old' to choose file</string>
+          <string>Press 'Open Old' to choose old sheet from SAP</string>
          </property>
         </widget>
        </item>
@@ -46,7 +46,7 @@
        <item>
         <widget class="QLineEdit" name="lineEdit_newFilePath">
          <property name="text">
-          <string>Press 'Open New' to choose file</string>
+          <string>Press 'Open New' to choose new sheet from SCH</string>
          </property>
         </widget>
        </item>

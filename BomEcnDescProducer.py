@@ -10,6 +10,8 @@ import traceback
 #from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
 from PyQt5 import QtWidgets, uic
+import datetime
+import os.path
 
 #####exp code area########################################
 
@@ -50,14 +52,20 @@ from PyQt5 import QtWidgets, uic
 #     for (a,b,c),(d,e) in arr.items():
 #         print(a,b,c,d,e)
 
-def exp_to_str():
-    s = 'abc*de'
-    if '*' in s:
-        print('hit')
-        s = s.replace('*', '')
-        print(f'new s = {s}')
-    else:
-        print('boo')
+# def exp_to_str():
+#     s = 'abc*de'
+#     if '*' in s:
+#         print('hit')
+#         s = s.replace('*', '')
+#         print(f'new s = {s}')
+#     else:
+#         print('boo')
+
+# def test_to_datetime():
+#     print(datetime.datetime.now())
+
+# def test_to_os_filepath():
+#     print(os.path.basename('D:/WorkSrc/eclipse-workspace/DeltaBomEcnDescProducer/test_files/ver2/5502796600_SCH.TXT'))
 
 #############################################
 
@@ -66,7 +74,7 @@ class MainDialog(QDialog):
     def __init__(self):
         super(MainDialog, self).__init__()        
         uic.loadUi('MainDialog.ui', self)
-        self.setWindowTitle('Delta BOM ECN Description Producer')
+        self.setWindowTitle('Delta BOM ECN Description Producer v2')
         
         self.pushButton_openOld.clicked.connect(self.on_push_open_old)
         self.pushButton_openNew.clicked.connect(self.on_push_open_new)
@@ -79,12 +87,10 @@ class MainDialog(QDialog):
 #         self.btn_open_new = QPushButton()
 #         self.btn_open_old.setText('open old')
 #         self.btn_open_new.setText('open new')
-#         
 #         self.ledit_old = QLineEdit()
 #         self.ledit_new = QLineEdit()
 #         self.ledit_old.setText("press 'open old' to select your old BOM ")        
-#         self.ledit_new.setText("press 'open old' to select your new BOM ")
-# 
+#         self.ledit_new.setText("press 'open old' to select your new BOM ") 
 #         print(f'line edit size = {self.ledit_new.size().width()}, height = {self.ledit_new.size().height()}')           
 
     def on_push_open_old(self):        
@@ -103,14 +109,14 @@ class MainDialog(QDialog):
         print('output') 
         try: 
             # the format of bom = {symbol_id : part_number]
-            self.textBrowser_processStatus.setText('processing...')            
-            old_bom, parse_log = BomTxtWorker.parse_file(self.old_file_path)
+            self.textBrowser_processStatus.setText(f'{datetime.datetime.now()}>>processing...')            
+            old_bom, parse_log = BomTxtWorker.parse_file_sap(self.old_file_path)
             self.textBrowser_processStatus.append(parse_log)
-            new_bom, parse_log = BomTxtWorker.parse_file(self.new_file_path)
+            new_bom, parse_log = BomTxtWorker.parse_file_sch(self.new_file_path)
             self.textBrowser_processStatus.append(parse_log)
             savefile_path, _filter = QFileDialog.getSaveFileName(filter='*.txt')
             BomTxtWorker.save_ecn_description(old_bom, new_bom, savefile_path)
-            self.textBrowser_processStatus.append('DONE! ECN content file has outputted, Sir.')
+            self.textBrowser_processStatus.append(f'{datetime.datetime.now()}>>DONE! ECN content file has outputted, Sir.')
         except Exception as e: #TACTIC: To catches any exception (include inherited exception class)
             print(f'{type(e)}:{e}')
             #traceback.print_exc()
@@ -121,7 +127,7 @@ class MainDialog(QDialog):
 
 class BomTxtWorker():
     @staticmethod
-    def parse_file(filepath):
+    def parse_file_sap(filepath):
         print(sys._getframe().f_code.co_name) # TACTIC: print the current function name
         
         if type(filepath)!= str:
@@ -141,11 +147,43 @@ class BomTxtWorker():
                     parse_log += f'illegal line: {line}\n'
                 else:
                     bom[parsed_line[0]] = parsed_line[1]
-                    parse_log += f'got pair ({parsed_line[0]}, {parsed_line[1]})\n'                                        
+                    #parse_log += f'got pair ({parsed_line[0]}, {parsed_line[1]})\n'                                        
         
-        print(f'file ({filepath}), parsed line num = {len(bom)}')   
-        parse_log += f'parse file ({filepath}), got num of symbols = {len(bom)}'
+        filename = os.path.basename(filepath)
+        print(f'file ({filename}), parsed line num = {len(bom)}')   
+        parse_log += f'parse file ({filename}), got num of symbols = {len(bom)}'
         return bom, parse_log
+    
+    @staticmethod
+    def parse_file_sch(filepath):
+        print(sys._getframe().f_code.co_name) # TACTIC: print the current function name
+        
+        if type(filepath)!= str:
+            raise TypeError('Given arg filepath is not type str')
+
+        if not filepath:
+            raise ValueError('Given arg filepath is empty.')
+        
+        bom = dict()
+        parse_log = ''   
+            
+        with open(filepath) as f:
+            for line in f:  #TACTIC: readline from text file.                        
+                parsed_line = line.split()
+                if len(parsed_line) < 3:
+                    print(f'illegal line: {line}')
+                    parse_log += f'illegal line: {line}\n'
+                else:
+                    if parsed_line[2].lower() == 'v':
+                        bom[f'{parsed_line[0]}*'] = parsed_line[1]
+                    else:
+                        bom[parsed_line[0]] = parsed_line[1]
+                    #parse_log += f'got pair ({parsed_line[0]}, {parsed_line[1]})\n'                                        
+        
+        filename = os.path.basename(filepath)
+        print(f'file ({filename}), parsed line num = {len(bom)}')   
+        parse_log += f'parse file ({filename}), got num of symbols = {len(bom)}'
+        return bom, parse_log    
 
     @staticmethod
     def save_ecn_description(bom_old, bom_new, filepath):
